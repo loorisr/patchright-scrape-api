@@ -11,13 +11,16 @@ from dotenv import load_dotenv
 from playwright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
 from fake_useragent import UserAgent
 
+import markdownify
+import html2text
+
 # Load environment variables
 load_dotenv()
 
 RESOURCES_EXCLUDED = ['image', 'stylesheet', 'media', 'font','other']
 
 # Configuration from environment
-AD_SERVING_DOMAINS = os.getenv('AD_SERVING_DOMAINS', [])
+ADS_BLOCKED_DOMAINS = os.getenv('ADS_BLOCKED_DOMAINS', [])
 ADS_BLOCKLIST_URL = os.getenv('ADS_BLOCKLIST_URL')
 ADS_BLOCKLIST_PATH = os.getenv('ADS_BLOCKLIST_PATH')
 
@@ -29,6 +32,24 @@ PROXY_PASSWORD = os.getenv('PROXY_PASSWORD')
 # Global browser and context instances
 browser: Browser = None
 context: BrowserContext = None
+
+class FirecrawlScape(BaseModel):
+    url: str
+    formats: list[str] = ["markdown"]
+    onlyMainContent: bool = True
+    includeTags: list[str] = None
+    excludeTags: list[str] = None
+    headers: dict = None
+    waitFor: int = 0
+    mobile: bool = False
+    skipTlsVerification: bool = False
+    timeout: int = 30000
+    jsonOptions: dict = None
+    actions: list[dict] = None
+    location: dict = {"country": "US", "languages":""}
+    removeBase64Images: bool = False
+    blockAds: bool = True
+
 
 class UrlModel(BaseModel):
     url: str
@@ -64,14 +85,15 @@ def update_ads_blocklist_from_url():
         response.raise_for_status()  # Raise an exception for HTTP errors
 
         # Split the content by lines and add each line to the list
-        global AD_SERVING_DOMAINS
-        AD_SERVING_DOMAINS = response.text.splitlines()
+        to_block = response.text.splitlines()
 
         # Split the content by lines and filter out lines starting with #
-        AD_SERVING_DOMAINS = [
+        to_block = [
             line.strip() for line in response.text.splitlines()
             if line.strip() and not line.strip().startswith("#")
         ]
+        global ADS_BLOCKED_DOMAINS
+        ADS_BLOCKED_DOMAINS.append(to_block)
         print(f"Blocklist: {ADS_BLOCKLIST_URL} downloaded")
 
     except requests.exceptions.RequestException as e:
@@ -82,11 +104,13 @@ def update_ads_blocklist_from_file():
     # Open the file and read its contents
         with open(ADS_BLOCKLIST_PATH, "r") as file:
             # Read all lines and filter out lines starting with #
-            global AD_SERVING_DOMAINS
-            AD_SERVING_DOMAINS = [
+            to_block = [
                 line.strip() for line in file.readlines()
                 if line.strip() and not line.strip().startswith("#")
             ]
+        
+        global ADS_BLOCKED_DOMAINS
+        ADS_BLOCKED_DOMAINS.append(to_block)
 
         print(f"Blocklist: {ADS_BLOCKLIST_PATH} updated")
     except FileNotFoundError:
@@ -146,8 +170,8 @@ async def lifespan(app: FastAPI):
 
     async def block_elements(route: Route, request: PlaywrightRequest):
         hostname = urlparse(request.url).hostname
-        #if any(domain in hostname for domain in AD_SERVING_DOMAINS):
-        if hostname in AD_SERVING_DOMAINS:
+        #if any(domain in hostname for domain in ADS_BLOCKED_DOMAINS):
+        if hostname in ADS_BLOCKED_DOMAINS:
             #print(f"{hostname} blocked")
             await route.abort()
         elif BLOCK_MEDIA:
@@ -170,6 +194,58 @@ async def lifespan(app: FastAPI):
         await browser.close()
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.post("/v1/scrape")
+async def scrape_single_firecrawl(request_model: FirecrawlScape):
+    request_model_scrape= UrlModel(
+            url=request_model.url,
+            wait_after_load=request_model.waitFor,
+            timeout=request_model.timeout,
+            headers=request_model.headers if request_model.headers else {}  # Use {} if None
+         #   check_selector=request_model.check_selector if request_model.check_selector else ""  # Use {} if None
+        )
+    
+
+    page = await context.new_page()
+    scrapped_result =  await scrape_page(page, request_model_scrape)
+    content = scrapped_result['content']
+    result = {}
+    result['success'] = True
+    result['data'] = {}
+    result['metadata'] = {}
+    result['metadata']['url'] = request_model.url
+    result['metadata']['statusCode'] = scrapped_result['pageStatusCode']
+    if 'markdown' in request_model.formats:
+        #content_html2text = html2text.html2text(content)
+        #result["markdown"] = content_html2text
+        content_markdownify = markdownify.markdownify(content)
+        result['data']["markdown"] = content_markdownify
+    if 'rawHtml' in request_model.formats:
+        result['data']["rawHtml"] = content
+    if 'html' in request_model.formats:
+        result['data']["html"] = content
+
+    return result
+
+@app.get("/scrape")
+async def scrape_test(url):
+
+    request_model= UrlModel(
+            url=url,
+        )
+
+    page = await context.new_page()
+    result =  await scrape_page(page, request_model)
+    content = result['content']
+    content_html2text = html2text.html2text(content)
+    content_markdownify = markdownify.markdownify(content)
+    result = {}
+    result["content"] = content
+    result["html2text"] = content_html2text
+    result["markdownify"] = content_markdownify
+
+    return content_markdownify
 
 @app.post("/scrape")
 async def scrape_single_page_endpoint(request_model: UrlModel):
@@ -227,6 +303,12 @@ async def scrape_page(page, request_model):
         status_code = response.status if response else None
         page_error = get_error(status_code) if status_code != 200 else None
 
+
+        if not page_error:
+            print("✅ Scrape successful!")
+        else:
+            print(f"🚨 Scrape failed with status code: ${page_error}")
+                        
         return {
             "content": content,
             "pageStatusCode": status_code,

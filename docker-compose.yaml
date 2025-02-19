@@ -9,6 +9,7 @@ services:
       - PROXY_SERVER=
       - PROXY_USERNAME=
       - PROXY_PASSWORD=
+      - ADS_BLOCKED_DOMAINS=
       #- ADS_BLOCKLIST_URL=https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/multi.txt
       - ADS_BLOCKLIST_PATH=blocklist.txt
     restart: unless-stopped
