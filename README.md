@@ -10,9 +10,11 @@ It is inspired from the Typescript version of [Firecrawl](https://github.com/men
 Improvements:
 * better domain blocking handling
 * better media blocking handling
-* scrape multiple page in parallel
+* scrape multiple pages in parallel
+* scrape endpoint compatible with Firecrawl API
 
 ## Env vars
+* `ADS_BLOCKED_DOMAINS`: list of domains to block
 * `ADS_BLOCKLIST_URL`: url to a domain blocklist. For example: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt
 * `ADS_BLOCKLIST_PATH`: path to a domain blocklist. For example blocklist.txt
 * `BLOCK_MEDIA`: true or false. If true, blocks media.
@@ -27,11 +29,16 @@ Improvements:
   - wait_after_load: time in ms to wait after the page is loaded. Default: 0
   - timeout: time in ms before timeout. Default: 15000
   - headers: Specific headers to add = Default: None
-  - check_selector: str = Specific selector to wait for
+* `/v1/scrape`
+  - url: url to scrape
+  - waitFor: time in ms to wait after the page is loaded. Default: 0
+  - timeout: time in ms before timeout. Default: 15000
+  - headers: Specific headers to add = Default: None
+  - formats: List of formats to include in the output: markdown, html, rawHtml : Default : ["markdown"]
+  - **needs [html-to-markdown cli](https://github.com/JohannesKaufmann/html-to-markdown) for Markdown output**
 * `/scrape_multiple`
   - urls: a list of urls to scrape
   - wait_after_load: time in ms to wait after the page is loaded. Default: 0
   - timeout: time in ms before timeout. Default: 15000
   - headers: Specific headers to add = Default: None
-  - check_selector: str = Specific selector to wait for
  
