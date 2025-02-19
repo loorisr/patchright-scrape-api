@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+playwright
+python-dotenv
+fake-useragent
+requests
