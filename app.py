@@ -2,6 +2,7 @@ import os
 import asyncio
 import requests
 import re
+import subprocess
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException
@@ -10,9 +11,6 @@ from typing import Union
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
 from fake_useragent import UserAgent
-
-import markdownify
-import html2text
 
 # Load environment variables
 load_dotenv()
@@ -56,14 +54,12 @@ class UrlModel(BaseModel):
     wait_after_load: int = 0
     timeout: int = 15000
     headers: dict = None
-    check_selector: str = None
 
 class MultipleUrlModel(BaseModel):
     urls: Union[str, list[str]]
     wait_after_load: int = 0
     timeout: int = 15000
     headers: dict = None
-    check_selector: str = None
 
 def is_valid_url(url: str) -> bool:
     pattern = r'^(http|https):\/\/([\w.-]+)(\.[\w.-]+)+([\/\w\.-]*)*\/?$'
@@ -193,9 +189,30 @@ async def lifespan(app: FastAPI):
     if browser:
         await browser.close()
 
+
+def html2markdown(html: str): # uses https://github.com/JohannesKaufmann/html-to-markdown
+    process = subprocess.Popen(
+        ['html2markdown'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    # Pass the HTML content to html2markdown
+    stdout, stderr = process.communicate(input=html)
+    
+    # Check for errors
+    if process.returncode != 0:
+        print(f"Error: {stderr}")
+    else:
+        # Output the Markdown content
+        return stdout
+    
+
 app = FastAPI(lifespan=lifespan)
 
-
+# Firecrawl compatible scrape API
 @app.post("/v1/scrape")
 async def scrape_single_firecrawl(request_model: FirecrawlScape):
     request_model_scrape= UrlModel(
@@ -203,7 +220,6 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
             wait_after_load=request_model.waitFor,
             timeout=request_model.timeout,
             headers=request_model.headers if request_model.headers else {}  # Use {} if None
-         #   check_selector=request_model.check_selector if request_model.check_selector else ""  # Use {} if None
         )
     
 
@@ -217,35 +233,18 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
     result['metadata']['url'] = request_model.url
     result['metadata']['statusCode'] = scrapped_result['pageStatusCode']
     if 'markdown' in request_model.formats:
-        #content_html2text = html2text.html2text(content)
+        #markdown = html2text.html2text(content)
         #result["markdown"] = content_html2text
-        content_markdownify = markdownify.markdownify(content)
-        result['data']["markdown"] = content_markdownify
+        #markdown = markdownify.markdownify(content)
+        markdown = html2markdown(content)
+        result['data']['markdown'] = markdown
     if 'rawHtml' in request_model.formats:
-        result['data']["rawHtml"] = content
+        result['data']['rawHtml'] = content
     if 'html' in request_model.formats:
-        result['data']["html"] = content
+        result['data']['html'] = content
 
     return result
 
-@app.get("/scrape")
-async def scrape_test(url):
-
-    request_model= UrlModel(
-            url=url,
-        )
-
-    page = await context.new_page()
-    result =  await scrape_page(page, request_model)
-    content = result['content']
-    content_html2text = html2text.html2text(content)
-    content_markdownify = markdownify.markdownify(content)
-    result = {}
-    result["content"] = content
-    result["html2text"] = content_html2text
-    result["markdownify"] = content_markdownify
-
-    return content_markdownify
 
 @app.post("/scrape")
 async def scrape_single_page_endpoint(request_model: UrlModel):
@@ -263,7 +262,6 @@ async def scrape_page(page, request_model):
     print(f"Wait After Load: {request_model.wait_after_load}ms")
     print(f"Timeout: {request_model.timeout}ms")
     print(f"Headers: {request_model.headers or 'None'}")
-    print(f"Check Selector: {request_model.check_selector or 'None'}")
     print('='*50)
 
 
@@ -292,12 +290,6 @@ async def scrape_page(page, request_model):
 
         if request_model.wait_after_load > 0:
             await asyncio.sleep(request_model.wait_after_load / 1000)
-
-        if request_model.check_selector:
-            await page.wait_for_selector(
-                request_model.check_selector,
-                timeout=request_model.timeout
-            )
 
         content = await page.content()
         status_code = response.status if response else None
@@ -338,8 +330,7 @@ async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
             url=url,
             wait_after_load=request_model.wait_after_load,
             timeout=request_model.timeout,
-            headers=request_model.headers if request_model.headers else {},  # Use {} if None
-            check_selector=request_model.check_selector if request_model.check_selector else ""  # Use {} if None
+            headers=request_model.headers if request_model.headers else {}  # Use {} if None
         ) for url in urls
     ]
     print(url_models)

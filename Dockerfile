@@ -13,6 +13,9 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN wget https://github.com/JohannesKaufmann/html-to-markdown/releases/download/v2.2.2/html2markdown_2.2.2_linux_amd64.deb
+RUN apt install ./html2markdown_2.2.2_linux_amd64.deb 
+
 # Copy the rest of the application code
 COPY . .
 
