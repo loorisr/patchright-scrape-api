@@ -12,6 +12,8 @@ Improvements:
 * better media blocking handling
 * scrape multiple pages in parallel
 * scrape endpoint compatible with Firecrawl API
+* return cleaned html and markdown
+* uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
 
 ## Env vars
 * `ADS_BLOCKED_DOMAINS`: list of domains to block
