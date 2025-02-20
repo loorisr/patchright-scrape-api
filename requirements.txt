@@ -1,6 +1,11 @@
 fastapi
 uvicorn
-playwright
+#playwright
+#playwright_stealth
+patchright
 python-dotenv
 fake-useragent
 requests
+#html2text
+markdownify
+html_sanitizer

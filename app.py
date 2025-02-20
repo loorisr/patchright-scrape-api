@@ -3,14 +3,22 @@ import asyncio
 import requests
 import re
 import subprocess
+import json
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Union
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
+#from playwright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
+from patchright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
+#from playwright_stealth import stealth_async
 from fake_useragent import UserAgent
+
+#import html2text
+import markdownify
+from html_sanitizer import Sanitizer
+sanitizer = Sanitizer()  # default configuration
 
 # Load environment variables
 load_dotenv()
@@ -18,7 +26,7 @@ load_dotenv()
 RESOURCES_EXCLUDED = ['image', 'stylesheet', 'media', 'font','other']
 
 # Configuration from environment
-ADS_BLOCKED_DOMAINS = os.getenv('ADS_BLOCKED_DOMAINS', [])
+ADS_BLOCKED_DOMAINS = json.loads(os.getenv('ADS_BLOCKED_DOMAINS', []))
 ADS_BLOCKLIST_URL = os.getenv('ADS_BLOCKLIST_URL')
 ADS_BLOCKLIST_PATH = os.getenv('ADS_BLOCKLIST_PATH')
 
@@ -89,8 +97,9 @@ def update_ads_blocklist_from_url():
             if line.strip() and not line.strip().startswith("#")
         ]
         global ADS_BLOCKED_DOMAINS
-        ADS_BLOCKED_DOMAINS.append(to_block)
-        print(f"Blocklist: {ADS_BLOCKLIST_URL} downloaded")
+        ADS_BLOCKED_DOMAINS.extend(to_block)
+
+        print(f"Blocklist: {ADS_BLOCKLIST_URL} downloaded. {len(ADS_BLOCKED_DOMAINS)} domains blocked.")
 
     except requests.exceptions.RequestException as e:
         print(f"Error downloading the blocklist: {e}")
@@ -106,9 +115,9 @@ def update_ads_blocklist_from_file():
             ]
         
         global ADS_BLOCKED_DOMAINS
-        ADS_BLOCKED_DOMAINS.append(to_block)
+        ADS_BLOCKED_DOMAINS.extend(to_block)
 
-        print(f"Blocklist: {ADS_BLOCKLIST_PATH} updated")
+        print(f"Blocklist: {ADS_BLOCKLIST_PATH} updated. {len(ADS_BLOCKED_DOMAINS)} domains blocked.")
     except FileNotFoundError:
         print(f"Error: The file '{ADS_BLOCKLIST_PATH}' was not found.")
     except Exception as e:
@@ -135,8 +144,9 @@ async def lifespan(app: FastAPI):
             '--disable-gpu'
         ]
     )
-
-    user_agent = UserAgent().random
+    
+    user_agent = UserAgent(browsers=['Chrome']).random
+    
     viewport = {'width': 1920, 'height': 1080}
     context_options = {'user_agent': user_agent, 'viewport': viewport}
 
@@ -162,7 +172,7 @@ async def lifespan(app: FastAPI):
     elif ADS_BLOCKLIST_URL:
         update_ads_blocklist_from_url()
     else:
-        print("Ads blocking disabled")
+        print("Ads blocking disabled.")
 
     async def block_elements(route: Route, request: PlaywrightRequest):
         hostname = urlparse(request.url).hostname
@@ -222,37 +232,50 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
             headers=request_model.headers if request_model.headers else {}  # Use {} if None
         )
     
-
-    page = await context.new_page()
-    scrapped_result =  await scrape_page(page, request_model_scrape)
-    content = scrapped_result['content']
+    scrapped_result =  await scrape_page(request_model_scrape)
+    rawHtml = scrapped_result['content']
     result = {}
     result['success'] = True
     result['data'] = {}
     result['metadata'] = {}
     result['metadata']['url'] = request_model.url
     result['metadata']['statusCode'] = scrapped_result['pageStatusCode']
+    
     if 'markdown' in request_model.formats:
         #markdown = html2text.html2text(content)
+        #with open("html2text.txt", "w") as text_file:
+        #    text_file.write(markdown)
         #result["markdown"] = content_html2text
-        #markdown = markdownify.markdownify(content)
-        markdown = html2markdown(content)
+        markdown = markdownify.markdownify(rawHtml)
+        #with open("markdownify.txt", "w") as text_file:
+        #    text_file.write(markdown)
+        #markdown = html2markdown(content)
+        #with open("html2markdown.txt", "w") as text_file:
+         #   text_file.write(markdown)
         result['data']['markdown'] = markdown
-    if 'rawHtml' in request_model.formats:
-        result['data']['rawHtml'] = content
-    if 'html' in request_model.formats:
-        result['data']['html'] = content
 
+    if 'rawHtml' in request_model.formats:
+        result['data']['rawHtml'] = rawHtml
+
+    if 'html' in request_model.formats:
+        html = sanitizer.sanitize(rawHtml)
+        result['data']['html'] = html
+
+        # with open("html.txt", "w") as text_file:
+        #     text_file.write(html)
+        # with open("rawHtml.txt", "w") as text_file:
+        #     text_file.write(rawHtml)
+        # with open("html-markdownify.txt", "w") as text_file:
+        #     text_file.write(markdownify.markdownify(html))
     return result
 
 
 @app.post("/scrape")
 async def scrape_single_page_endpoint(request_model: UrlModel):
 
-    page = await context.new_page()
-    return await scrape_page(page, request_model)
+    return await scrape_page(request_model)
 
-async def scrape_page(page, request_model):
+async def scrape_page(request_model):
     url = request_model.url
     if not url or not is_valid_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
@@ -266,6 +289,7 @@ async def scrape_page(page, request_model):
 
 
     page = await context.new_page()
+    ####await stealth_async(page)
     try:
         if request_model.headers:
             await page.set_extra_http_headers(request_model.headers)
@@ -321,10 +345,6 @@ async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
         if not is_valid_url(url):
             raise HTTPException(status_code=400, detail="Invalid URL")
 
-    pages = [await context.new_page() for _ in request_model.urls]
-
-    print(request_model)
-
     url_models = [
         UrlModel(
             url=url,
@@ -333,10 +353,9 @@ async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
             headers=request_model.headers if request_model.headers else {}  # Use {} if None
         ) for url in urls
     ]
-    print(url_models)
 
     results = await asyncio.gather(
-        *(scrape_page(page, url_models) for page, url_models in zip(pages, url_models))
+        *(scrape_page(page, url_models) for url_models in url_models)
     )
     return results
 
