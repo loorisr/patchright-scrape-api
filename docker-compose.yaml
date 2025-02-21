@@ -1,5 +1,5 @@
 services:
-  playwright:
+  patchright:
     container_name: patchright-scrape-api
     build: .
     ports:

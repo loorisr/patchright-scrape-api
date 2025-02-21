@@ -2,8 +2,9 @@ import os
 import asyncio
 import requests
 import re
-import subprocess
+#import subprocess
 import json
+import time
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException
@@ -257,6 +258,7 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
     result['metadata'] = {}
     result['metadata']['url'] = request_model.url
     result['metadata']['statusCode'] = scrapped_result['pageStatusCode']
+    result['metadata']['processingTIme'] = scrapped_result['processingTIme']
     
     if 'markdown' in request_model.formats:
         #markdown = html2text.html2text(content)
@@ -292,6 +294,7 @@ async def scrape_single_page_endpoint(request_model: UrlModel):
     return await scrape_page(request_model)
 
 async def scrape_page(request_model):
+    startTime = time.time()
     url = request_model.url
     if not url or not is_valid_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
@@ -333,15 +336,17 @@ async def scrape_page(request_model):
         status_code = response.status if response else None
         page_error = get_error(status_code) if status_code != 200 else None
 
+        endTime = time.time()
 
         if not page_error:
-            print("✅ Scrape successful!")
+            print(f"✅ {url} scrape successful in {endTime-startTime:.3f}s!")
         else:
-            print(f"🚨 Scrape failed with status code: ${page_error}")
+            print(f"🚨 {url} scrape failed with status code: ${page_error}")
                         
         return {
             "content": content,
             "pageStatusCode": status_code,
+            "processingTime": round(endTime-startTime, 3),
             **({"pageError": page_error} if page_error else {})
         }
 
