@@ -12,25 +12,34 @@ from typing import Union
 from dotenv import load_dotenv
 #from playwright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
 from patchright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
-#from playwright_stealth import stealth_async
 from fake_useragent import UserAgent
 
 #import html2text
 import markdownify
 from html_sanitizer import Sanitizer
+
 sanitizer = Sanitizer()  # default configuration
 
 # Load environment variables
 load_dotenv()
 
-RESOURCES_EXCLUDED = ['image', 'stylesheet', 'media', 'font','other']
-
 # Configuration from environment
-ADS_BLOCKED_DOMAINS = json.loads(os.getenv('ADS_BLOCKED_DOMAINS', []))
-ADS_BLOCKLIST_URL = os.getenv('ADS_BLOCKLIST_URL')
-ADS_BLOCKLIST_PATH = os.getenv('ADS_BLOCKLIST_PATH')
+try:
+    # Attempt to parse the environment variable as JSON
+    DOMAIN_BLOCKED_DOMAINS = json.loads(os.getenv('DOMAIN_BLOCKED_DOMAINS', []))
+except:
+    DOMAIN_BLOCKED_DOMAINS = []
 
-BLOCK_MEDIA = os.getenv('BLOCK_MEDIA', 'False').upper() == 'TRUE'
+# https://playwright.dev/python/docs/api/class-request#request-resource-type
+try:
+    # Attempt to parse the environment variable as JSON
+    RESOURCES_BLOCKED = json.loads(os.getenv('RESOURCES_BLOCKED', ['image', 'stylesheet', 'media', 'font','other']))
+except:
+    RESOURCES_BLOCKED = ['image', 'stylesheet', 'media', 'font','other']
+
+DOMAIN_BLOCKLIST_URL = os.getenv('DOMAIN_BLOCKLIST_URL')
+DOMAIN_BLOCKLIST_PATH = os.getenv('DOMAIN_BLOCKLIST_PATH')
+
 PROXY_SERVER = os.getenv('PROXY_SERVER')
 PROXY_USERNAME = os.getenv('PROXY_USERNAME')
 PROXY_PASSWORD = os.getenv('PROXY_PASSWORD')
@@ -85,7 +94,7 @@ def get_error(status_code: int) -> str:
 def update_ads_blocklist_from_url():
     try:
         # Download the blocklist
-        response = requests.get(ADS_BLOCKLIST_URL)
+        response = requests.get(DOMAIN_BLOCKLIST_URL)
         response.raise_for_status()  # Raise an exception for HTTP errors
 
         # Split the content by lines and add each line to the list
@@ -96,10 +105,10 @@ def update_ads_blocklist_from_url():
             line.strip() for line in response.text.splitlines()
             if line.strip() and not line.strip().startswith("#")
         ]
-        global ADS_BLOCKED_DOMAINS
-        ADS_BLOCKED_DOMAINS.extend(to_block)
+        global DOMAIN_BLOCKED_DOMAINS
+        DOMAIN_BLOCKED_DOMAINS.extend(to_block)
 
-        print(f"Blocklist: {ADS_BLOCKLIST_URL} downloaded. {len(ADS_BLOCKED_DOMAINS)} domains blocked.")
+        print(f"Blocklist: {DOMAIN_BLOCKLIST_URL} downloaded. {len(DOMAIN_BLOCKED_DOMAINS)} domains blocked.")
 
     except requests.exceptions.RequestException as e:
         print(f"Error downloading the blocklist: {e}")
@@ -107,32 +116,33 @@ def update_ads_blocklist_from_url():
 def update_ads_blocklist_from_file():
     try:
     # Open the file and read its contents
-        with open(ADS_BLOCKLIST_PATH, "r") as file:
+        with open(DOMAIN_BLOCKLIST_PATH, "r") as file:
             # Read all lines and filter out lines starting with #
             to_block = [
                 line.strip() for line in file.readlines()
                 if line.strip() and not line.strip().startswith("#")
             ]
         
-        global ADS_BLOCKED_DOMAINS
-        ADS_BLOCKED_DOMAINS.extend(to_block)
+        global DOMAIN_BLOCKED_DOMAINS
+        DOMAIN_BLOCKED_DOMAINS.extend(to_block)
 
-        print(f"Blocklist: {ADS_BLOCKLIST_PATH} updated. {len(ADS_BLOCKED_DOMAINS)} domains blocked.")
+        print(f"Blocklist: {DOMAIN_BLOCKLIST_PATH} loaded. {len(DOMAIN_BLOCKED_DOMAINS)} domains blocked.")
     except FileNotFoundError:
-        print(f"Error: The file '{ADS_BLOCKLIST_PATH}' was not found.")
+        print(f"Error: The file '{DOMAIN_BLOCKLIST_PATH}' was not found.")
     except Exception as e:
         print(f"An error occurred while reading the file: {e}")
     
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global browser, context
+    global browser, context, RESOURCES_BLOCKED
 
     # Startup logic
     playwright = await async_playwright().start()
     
     browser = await playwright.chromium.launch(
         headless=True,
+        channel="chrome",
         args=[
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -146,6 +156,7 @@ async def lifespan(app: FastAPI):
     )
     
     user_agent = UserAgent(browsers=['Chrome']).random
+    #user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
     
     viewport = {'width': 1920, 'height': 1080}
     context_options = {'user_agent': user_agent, 'viewport': viewport}
@@ -162,30 +173,24 @@ async def lifespan(app: FastAPI):
 
     context = await browser.new_context(**context_options)
 
-    if BLOCK_MEDIA:
-        print("Blocking medias enabled")
+    if RESOURCES_BLOCKED:
+        print(f"Resources: {RESOURCES_BLOCKED} are blocked")
     else:
-        print("Blocking medias disabled")
+        print("Resource blocking is disabled.")
     
-    if ADS_BLOCKLIST_PATH:
+    if DOMAIN_BLOCKLIST_PATH:
         update_ads_blocklist_from_file()
-    elif ADS_BLOCKLIST_URL:
+    if DOMAIN_BLOCKLIST_URL:
         update_ads_blocklist_from_url()
+    if DOMAIN_BLOCKED_DOMAINS:
+        print(f"{len(DOMAIN_BLOCKED_DOMAINS)} domains blocked.")
     else:
-        print("Ads blocking disabled.")
+        print("Domain blocking is disabled.")
 
     async def block_elements(route: Route, request: PlaywrightRequest):
         hostname = urlparse(request.url).hostname
-        #if any(domain in hostname for domain in ADS_BLOCKED_DOMAINS):
-        if hostname in ADS_BLOCKED_DOMAINS:
-            #print(f"{hostname} blocked")
+        if hostname in DOMAIN_BLOCKED_DOMAINS or request.resource_type in RESOURCES_BLOCKED:
             await route.abort()
-        elif BLOCK_MEDIA:
-            if request.resource_type in RESOURCES_EXCLUDED:
-                await route.abort()
-                #print(f"{request.resource_type} blocked")
-            else:
-                await route.continue_()
         else:
             await route.continue_()
 
@@ -200,27 +205,39 @@ async def lifespan(app: FastAPI):
         await browser.close()
 
 
-def html2markdown(html: str): # uses https://github.com/JohannesKaufmann/html-to-markdown
-    process = subprocess.Popen(
-        ['html2markdown'],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+# def html2markdown(html: str): # uses https://github.com/JohannesKaufmann/html-to-markdown
+#     process = subprocess.Popen(
+#         ['html2markdown'],
+#         stdin=subprocess.PIPE,
+#         stdout=subprocess.PIPE,
+#         stderr=subprocess.PIPE,
+#         text=True
+#     )
 
-    # Pass the HTML content to html2markdown
-    stdout, stderr = process.communicate(input=html)
+#     # Pass the HTML content to html2markdown
+#     stdout, stderr = process.communicate(input=html)
     
-    # Check for errors
-    if process.returncode != 0:
-        print(f"Error: {stderr}")
-    else:
-        # Output the Markdown content
-        return stdout
+#     # Check for errors
+#     if process.returncode != 0:
+#         print(f"Error: {stderr}")
+#     else:
+#         # Output the Markdown content
+#         return stdout
     
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan,
+    title="Patchright scraping API",
+   # description=description,
+    summary="API to scrape an url using patchright",
+    version="0.0.1",
+    contact={
+        "name": "loorisr",
+        "url": "https://github.com/loorisr/playwright-scrape-api"
+    },
+    license_info={
+        "name": "GNU Affero General Public License v3.0",
+        "url": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+    })
 
 # Firecrawl compatible scrape API
 @app.post("/v1/scrape")
@@ -272,7 +289,6 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
 
 @app.post("/scrape")
 async def scrape_single_page_endpoint(request_model: UrlModel):
-
     return await scrape_page(request_model)
 
 async def scrape_page(request_model):
@@ -287,9 +303,7 @@ async def scrape_page(request_model):
     print(f"Headers: {request_model.headers or 'None'}")
     print('='*50)
 
-
     page = await context.new_page()
-    ####await stealth_async(page)
     try:
         if request_model.headers:
             await page.set_extra_http_headers(request_model.headers)
@@ -355,7 +369,7 @@ async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
     ]
 
     results = await asyncio.gather(
-        *(scrape_page(page, url_models) for url_models in url_models)
+        *(scrape_page(url_models) for url_models in url_models)
     )
     return results
 

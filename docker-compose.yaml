@@ -1,17 +1,17 @@
 services:
   playwright:
-    container_name: playwright-scrape-api
+    container_name: patchright-scrape-api
     build: .
     ports:
       - "3003:3003"
     environment:
-      - BLOCK_MEDIA=True
+      - DOMAIN_BLOCKED_DOMAINS=
+      - DOMAIN_BLOCKLIST_URL=
+      - DOMAIN_BLOCKLIST_PATH=blocklist.txt
+      - RESOURCES_BLOCKED=['image', 'stylesheet', 'media', 'font','other']
       - PROXY_SERVER=
       - PROXY_USERNAME=
       - PROXY_PASSWORD=
-      - ADS_BLOCKED_DOMAINS=
-      #- ADS_BLOCKLIST_URL=https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/multi.txt
-      - ADS_BLOCKLIST_PATH=blocklist.txt
     restart: unless-stopped
     security_opt:
       - no-new-privileges=true

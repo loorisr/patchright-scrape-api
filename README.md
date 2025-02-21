@@ -1,6 +1,6 @@
-# playwright-scrape-api
+# patchright-scrape-api
 
-Simple scraping API based on playwright.
+Simple scraping API based on patchright.
 It creates a REST API scrape endpoint to return the content of a page.
 
 It runs in docker.
@@ -15,16 +15,17 @@ Improvements:
 * return cleaned html and markdown
 * uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
 
+
 ## Env vars
-* `ADS_BLOCKED_DOMAINS`: list of domains to block. For example ["url1.com", "url2.com"]. If not set, use []
-* `ADS_BLOCKLIST_URL`: url to a domain blocklist. For example: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt
+* `DOMAIN_BLOCKED_DOMAINS`: list of domains to block. For example ["url1.com", "url2.com"].
+* `DOMAIN_BLOCKLIST_URL`: url of a domain blocklist. For example: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt
   
-  *It is better to use a small list otherwise it will slow down the page loading time. This list has already 154 000 entries!*
+  *It is better to use a small list otherwise it will slow down the page loading time. This light list has already 154 000 entries!*
   
-  *The best is to block the ads at the **DNS level**.*
+  *The best is to block the domain at the **DNS level**.*
   
-* `ADS_BLOCKLIST_PATH`: local path to a domain blocklist. For example blocklist.txt
-* `BLOCK_MEDIA`: true or false. If true, blocks media. Default is false
+* `DOMAIN_BLOCKLIST_PATH`: local path to a domain blocklist. For example blocklist.txt
+* `RESOURCES_EXCLUDED`: list of type of content to block. [] to disable. Default : ['image', 'stylesheet', 'media', 'font','other']. See https://playwright.dev/python/docs/api/class-request#request-resource-type
 
 * `PROXY_SERVER`: adress of the proxy server
 * `PROXY_USERNAME`: username of the proxy server

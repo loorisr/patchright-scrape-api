@@ -7,24 +7,17 @@ ENV PYTHONUNBUFFERED=1
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Copy the application code
+COPY . .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-#RUN wget https://github.com/JohannesKaufmann/html-to-markdown/releases/download/v2.2.2/html2markdown_2.2.2_linux_amd64.deb
-#RUN apt install ./html2markdown_2.2.2_linux_amd64.deb 
-
-# Copy the rest of the application code
-COPY . .
-
-#RUN playwright install --with-deps chromium
-#RUN patchright install --with-deps chromium
-RUN patchright install chromium
+# Install patchright
+RUN patchright install chrome
 
 # Install Playwright dependencies. Uses less space than playwright install --with-deps chromium
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
