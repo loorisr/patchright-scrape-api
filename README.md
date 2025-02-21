@@ -16,10 +16,15 @@ Improvements:
 * uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
 
 ## Env vars
-* `ADS_BLOCKED_DOMAINS`: list of domains to block
+* `ADS_BLOCKED_DOMAINS`: list of domains to block. For example ["url1.com", "url2.com"]. If not set, use []
 * `ADS_BLOCKLIST_URL`: url to a domain blocklist. For example: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt
-* `ADS_BLOCKLIST_PATH`: path to a domain blocklist. For example blocklist.txt
-* `BLOCK_MEDIA`: true or false. If true, blocks media.
+  
+  *It is better to use a small list otherwise it will slow down the page loading time. This list has already 154 000 entries!*
+  
+  *The best is to block the ads at the **DNS level**.*
+  
+* `ADS_BLOCKLIST_PATH`: local path to a domain blocklist. For example blocklist.txt
+* `BLOCK_MEDIA`: true or false. If true, blocks media. Default is false
 
 * `PROXY_SERVER`: adress of the proxy server
 * `PROXY_USERNAME`: username of the proxy server
@@ -37,7 +42,6 @@ Improvements:
   - timeout: time in ms before timeout. Default: 15000
   - headers: Specific headers to add = Default: None
   - formats: List of formats to include in the output: markdown, html, rawHtml : Default : ["markdown"]
-  - **needs [html-to-markdown cli](https://github.com/JohannesKaufmann/html-to-markdown) for Markdown output**
 * `/scrape_multiple`
   - urls: a list of urls to scrape
   - wait_after_load: time in ms to wait after the page is loaded. Default: 0
