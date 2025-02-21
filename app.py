@@ -258,7 +258,7 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
     result['metadata'] = {}
     result['metadata']['url'] = request_model.url
     result['metadata']['statusCode'] = scrapped_result['pageStatusCode']
-    result['metadata']['processingTIme'] = scrapped_result['processingTIme']
+    result['metadata']['processingTime'] = scrapped_result['processingTime']
     
     if 'markdown' in request_model.formats:
         #markdown = html2text.html2text(content)
