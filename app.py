@@ -1,21 +1,17 @@
 import os
 import asyncio
 import requests
-import re
-#import subprocess
 import json
 import time
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, NonNegativeInt, HttpUrl
 from typing import Union
 from dotenv import load_dotenv
-#from playwright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
 from patchright.async_api import async_playwright, Browser, BrowserContext, Route, Request as PlaywrightRequest
 from fake_useragent import UserAgent
 
-#import html2text
 import markdownify
 from html_sanitizer import Sanitizer
 
@@ -50,16 +46,16 @@ browser: Browser = None
 context: BrowserContext = None
 
 class FirecrawlScape(BaseModel):
-    url: str
+    url: HttpUrl
     formats: list[str] = ["markdown"]
     onlyMainContent: bool = True
     includeTags: list[str] = None
     excludeTags: list[str] = None
     headers: dict = None
-    waitFor: int = 0
+    waitFor: NonNegativeInt = 0
     mobile: bool = False
     skipTlsVerification: bool = False
-    timeout: int = 30000
+    timeout: NonNegativeInt = 30000
     jsonOptions: dict = None
     actions: list[dict] = None
     location: dict = {"country": "US", "languages":""}
@@ -68,21 +64,16 @@ class FirecrawlScape(BaseModel):
 
 
 class UrlModel(BaseModel):
-    url: str
-    wait_after_load: int = 0
-    timeout: int = 15000
+    url: HttpUrl
+    wait_after_load: NonNegativeInt = 0
+    timeout: NonNegativeInt = 15000
     headers: dict = None
 
 class MultipleUrlModel(BaseModel):
-    urls: Union[str, list[str]]
-    wait_after_load: int = 0
-    timeout: int = 15000
+    urls: Union[HttpUrl, list[HttpUrl]]
+    wait_after_load: NonNegativeInt = 0
+    timeout: NonNegativeInt = 15000
     headers: dict = None
-
-def is_valid_url(url: str) -> bool:
-    pattern = r'^(http|https):\/\/([\w.-]+)(\.[\w.-]+)+([\/\w\.-]*)*\/?$'
-    return bool(re.match(pattern, url))
-
 
 def get_error(status_code: int) -> str:
     if 400 <= status_code < 500:
@@ -197,43 +188,28 @@ async def lifespan(app: FastAPI):
 
     await context.route("**/*", block_elements)
 
+    print("Ready!")
+
     yield  # App is running
 
     # Shutdown logic
+    print("Shutting down")
+
     if context:
         await context.close()
     if browser:
         await browser.close()
 
-
-# def html2markdown(html: str): # uses https://github.com/JohannesKaufmann/html-to-markdown
-#     process = subprocess.Popen(
-#         ['html2markdown'],
-#         stdin=subprocess.PIPE,
-#         stdout=subprocess.PIPE,
-#         stderr=subprocess.PIPE,
-#         text=True
-#     )
-
-#     # Pass the HTML content to html2markdown
-#     stdout, stderr = process.communicate(input=html)
-    
-#     # Check for errors
-#     if process.returncode != 0:
-#         print(f"Error: {stderr}")
-#     else:
-#         # Output the Markdown content
-#         return stdout
-    
+   
 
 app = FastAPI(lifespan=lifespan,
     title="Patchright scraping API",
    # description=description,
     summary="API to scrape an url using patchright",
-    version="0.0.1",
+    version="0.1.1",
     contact={
         "name": "loorisr",
-        "url": "https://github.com/loorisr/playwright-scrape-api"
+        "url": "https://github.com/loorisr/patchright-scrape-api"
     },
     license_info={
         "name": "GNU Affero General Public License v3.0",
@@ -293,11 +269,10 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
 async def scrape_single_page_endpoint(request_model: UrlModel):
     return await scrape_page(request_model)
 
+
 async def scrape_page(request_model):
     startTime = time.time()
-    url = request_model.url
-    if not url or not is_valid_url(url):
-        raise HTTPException(status_code=400, detail="Invalid URL")
+    url = str(request_model.url)
 
     print(f"\n{'='*20} Scrape Request {'='*20}")
     print(f"URL: {url}")
@@ -330,9 +305,14 @@ async def scrape_page(request_model):
             )
 
         if request_model.wait_after_load > 0:
-            await asyncio.sleep(request_model.wait_after_load / 1000)
+            await page.timeout(request_model.wait_after_load)
 
         content = await page.content()
+        header_content_type = await response.header_value('Content-Type')
+        header_content_type = header_content_type.lower()
+        if (header_content_type and ("application/json" in header_content_type or "text/plain" in header_content_type)):
+            content = await response.body()
+        
         status_code = response.status if response else None
         page_error = get_error(status_code) if status_code != 200 else None
 
@@ -358,11 +338,7 @@ async def scrape_page(request_model):
 
 @app.post("/scrape_multiple")
 async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
-    urls = request_model.urls
-
-    for url in urls:
-        if not is_valid_url(url):
-            raise HTTPException(status_code=400, detail="Invalid URL")
+    urls = request_model.urls if isinstance(request_model.urls, list) else [request_model.urls]
 
     url_models = [
         UrlModel(
@@ -380,4 +356,4 @@ async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv('PORT', 3003)))
+    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv('PORT', 3000)), reload=True)
