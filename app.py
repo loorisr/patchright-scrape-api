@@ -237,16 +237,7 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
     result['metadata']['processingTime'] = scrapped_result['processingTime']
     
     if 'markdown' in request_model.formats:
-        #markdown = html2text.html2text(content)
-        #with open("html2text.txt", "w") as text_file:
-        #    text_file.write(markdown)
-        #result["markdown"] = content_html2text
         markdown = markdownify.markdownify(rawHtml)
-        #with open("markdownify.txt", "w") as text_file:
-        #    text_file.write(markdown)
-        #markdown = html2markdown(content)
-        #with open("html2markdown.txt", "w") as text_file:
-         #   text_file.write(markdown)
         result['data']['markdown'] = markdown
 
     if 'rawHtml' in request_model.formats:
@@ -256,12 +247,6 @@ async def scrape_single_firecrawl(request_model: FirecrawlScape):
         html = sanitizer.sanitize(rawHtml)
         result['data']['html'] = html
 
-        # with open("html.txt", "w") as text_file:
-        #     text_file.write(html)
-        # with open("rawHtml.txt", "w") as text_file:
-        #     text_file.write(rawHtml)
-        # with open("html-markdownify.txt", "w") as text_file:
-        #     text_file.write(markdownify.markdownify(html))
     return result
 
 
@@ -356,4 +341,4 @@ async def scrape_multiple_page_endpoint(request_model: MultipleUrlModel):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv('PORT', 3000)), reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv('PORT', 3000)))

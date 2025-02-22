@@ -3,7 +3,7 @@ services:
     container_name: patchright-scrape-api
     build: .
     ports:
-      - "3003:3003"
+      - "3000:3000"
     environment:
       - DOMAIN_BLOCKED_DOMAINS=
       - DOMAIN_BLOCKLIST_URL=
@@ -12,6 +12,7 @@ services:
       - PROXY_SERVER=
       - PROXY_USERNAME=
       - PROXY_PASSWORD=
+     # - PORT=3015
     restart: unless-stopped
     security_opt:
       - no-new-privileges=true

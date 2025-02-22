@@ -8,12 +8,13 @@ It runs in docker.
 It is inspired from the Typescript version of [Firecrawl](https://github.com/mendableai/firecrawl/tree/main/apps/playwright-service-ts) and it is 100% compatible with it.
 
 Improvements:
+* uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
 * better domain blocking handling
 * better media blocking handling
 * scrape multiple pages in parallel
 * scrape endpoint compatible with Firecrawl API
 * return cleaned html and markdown
-* uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
+* lightweight: 1.2 Go
 
 
 ## Env vars
@@ -31,20 +32,22 @@ Improvements:
 * `PROXY_USERNAME`: username of the proxy server
 * `PROXY_PASSWORD`: password of the proxy server
 
+* `PORT`: port to run the app. Default: 3000
+
 ## Endpoints
 * `/scrape`
-  - url: url to scrape
+  - url: url to scrape : http://www.domain.tld
   - wait_after_load: time in ms to wait after the page is loaded. Default: 0
   - timeout: time in ms before timeout. Default: 15000
   - headers: Specific headers to add = Default: None
 * `/v1/scrape`
-  - url: url to scrape
+  - url: url to scrape : http://www.domain.tld
   - waitFor: time in ms to wait after the page is loaded. Default: 0
   - timeout: time in ms before timeout. Default: 15000
   - headers: Specific headers to add = Default: None
   - formats: List of formats to include in the output: markdown, html, rawHtml : Default : ["markdown"]
 * `/scrape_multiple`
-  - urls: a list of urls to scrape
+  - urls: an url or a list of urls to scrape: http://www.domain.tld or ["http://www.domain1.tld", "http://www.domain2.tld"]
   - wait_after_load: time in ms to wait after the page is loaded. Default: 0
   - timeout: time in ms before timeout. Default: 15000
   - headers: Specific headers to add = Default: None

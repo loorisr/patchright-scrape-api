@@ -1,5 +1,5 @@
-fastapi
-uvicorn
+fastapi[standard]
+#uvicorn
 #playwright
 #playwright_stealth
 patchright
