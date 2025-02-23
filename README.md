@@ -36,19 +36,14 @@ Improvements:
 
 ## Endpoints
 * `/scrape`
-  - url: url to scrape : http://www.domain.tld
-  - wait_after_load: time in ms to wait after the page is loaded. Default: 0
-  - timeout: time in ms before timeout. Default: 15000
-  - headers: Specific headers to add = Default: None
+  - **url**: url to scrape : http://www.domain.tld
+  - or **urls**: a list of urls to scrape: ["http://www.domain1.tld", "http://www.domain2.tld"]
+  - **wait_after_load**: time in ms to wait after the page is loaded. Default: 0
+  - **timeout**: time in ms before timeout. Default: 15000
+  - **headers**: Specific headers to add = Default: None
 * `/v1/scrape`
-  - url: url to scrape : http://www.domain.tld
-  - waitFor: time in ms to wait after the page is loaded. Default: 0
-  - timeout: time in ms before timeout. Default: 15000
-  - headers: Specific headers to add = Default: None
-  - formats: List of formats to include in the output: markdown, html, rawHtml : Default : ["markdown"]
-* `/scrape_multiple`
-  - urls: an url or a list of urls to scrape: http://www.domain.tld or ["http://www.domain1.tld", "http://www.domain2.tld"]
-  - wait_after_load: time in ms to wait after the page is loaded. Default: 0
-  - timeout: time in ms before timeout. Default: 15000
-  - headers: Specific headers to add = Default: None
- 
+  - **url**: url to scrape : http://www.domain.tld
+  - **waitFor**: time in ms to wait after the page is loaded. Default: 0
+  - **timeout**: time in ms before timeout. Default: 15000
+  - **headers**: Specific headers to add = Default: None
+  - **formats**: List of formats to include in the output: markdown, html, rawHtml : Default : ["markdown"]

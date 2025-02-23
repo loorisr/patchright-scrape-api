@@ -40,7 +40,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     && rm -rf /var/lib/apt/lists/*
 
 # copy the application
-COPY . .
+COPY app .
 
 ARG PORT
 ENV PORT=${PORT:-3000}
@@ -48,4 +48,4 @@ ENV PORT=${PORT:-3000}
 EXPOSE ${PORT}
 
 # Command to run the application
-CMD fastapi run app.py --host 0.0.0.0 --port $PORT
+CMD uvicorn app:app --host 0.0.0.0 --port $PORT

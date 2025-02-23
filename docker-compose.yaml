@@ -12,7 +12,7 @@ services:
       - PROXY_SERVER=
       - PROXY_USERNAME=
       - PROXY_PASSWORD=
-     # - PORT=3015
+     # - PORT=3000
     restart: unless-stopped
     security_opt:
       - no-new-privileges=true
