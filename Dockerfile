@@ -3,6 +3,11 @@ FROM python:3.13-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
+LABEL maintainer="loorisr"
+LABEL repository="https://github.com/loorisr/playwright-scrape-api"
+LABEL description="Simple scraping API based on patchright "
+LABEL date="2025-02-24"
+
 # Set the working directory in the container
 WORKDIR /app
 

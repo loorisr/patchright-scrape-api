@@ -340,8 +340,7 @@ async def scrape_page(request_model: UrlModel):
 
         content = await page.content()
         header_content_type = await response.header_value('Content-Type')
-        header_content_type = header_content_type.lower()
-        if (header_content_type and ("application/json" in header_content_type or "text/plain" in header_content_type)):
+        if (header_content_type and ("application/json" in header_content_type.lower() or "text/plain" in header_content_type.lower())):
             content = await response.body()
         
         status_code = response.status if response else None
