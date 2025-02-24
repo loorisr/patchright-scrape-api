@@ -1,11 +1,11 @@
-# patchright-scrape-api
+# Patchright Scrape API
 
 Simple scraping API based on patchright.
 It creates a REST API scrape endpoint to return the content of a page.
 
 It runs in docker.
 
-It is inspired from the Typescript version of [Firecrawl](https://github.com/mendableai/firecrawl/tree/main/apps/playwright-service-ts) and it is 100% compatible with it.
+It is inspired from the Typescript version of [Firecrawl](https://github.com/mendableai/firecrawl/tree/main/apps/playwright-service-ts) and it is 100% compatible with it. You just have to replace `build: apps/playwright-service-ts` by `image: loorisr/patchright-scrape-api` in your docker-compose
 
 Improvements:
 * uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
@@ -16,6 +16,7 @@ Improvements:
 * return cleaned html and markdown
 * lightweight: 1.2 Go
 
+Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
 
 ## Env vars
 * `DOMAIN_BLOCKED_DOMAINS`: list of domains to block. For example ["url1.com", "url2.com"].
