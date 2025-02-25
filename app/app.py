@@ -42,6 +42,9 @@ PROXY_SERVER = os.getenv('PROXY_SERVER')
 PROXY_USERNAME = os.getenv('PROXY_USERNAME')
 PROXY_PASSWORD = os.getenv('PROXY_PASSWORD')
 
+PERSISTENT_CONTEXT = os.getenv("PERSISTENT_CONTEXT", 'False').lower() in ('true', '1', 't')
+PATH_CONTEXT = "/context"
+
 # Global browser and context instances
 browser: Browser = None
 context: BrowserContext = None
@@ -149,24 +152,6 @@ def update_ads_blocklist_from_file():
 async def lifespan(app: FastAPI):
     global browser, context, RESOURCES_BLOCKED, DOMAIN_BLOCKED_DOMAINS
 
-    # Startup logic
-    playwright = await async_playwright().start()
-    
-    browser = await playwright.chromium.launch(
-        headless=True,
-        channel="chrome",
-        args=[
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
-        ]
-    )
-    
     user_agent = UserAgent(browsers=['Chrome']).random
 
     viewport = {'width': 1920, 'height': 1080}
@@ -182,7 +167,50 @@ async def lifespan(app: FastAPI):
     else:
         print("⚠️ WARNING: No proxy server provided")
 
-    context = await browser.new_context(**context_options)
+    # Startup logic
+    playwright = await async_playwright().start()
+    
+    if PERSISTENT_CONTEXT:
+        print("Launching Chrome with persistent context.")
+        context = await playwright.chromium.launch_persistent_context(
+            user_data_dir=PATH_CONTEXT,
+            headless=True,
+            channel="chrome",
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu',
+                '--no-default-browser-check',
+                '--disable-infobars'
+            ],
+            **context_options
+        )
+    else:
+        print("Launching Chrome with temporary context.")
+        browser = await playwright.chromium.launch(
+            headless=True,
+            channel="chrome",
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu',
+                '--no-default-browser-check',
+                '--no-startup-window',
+                '--disable-infobars'
+            ]
+        )
+        context = await browser.new_context(**context_options)
+    
 
     if RESOURCES_BLOCKED:
         print(f"Resources: {RESOURCES_BLOCKED} are blocked")

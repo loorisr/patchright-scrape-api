@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-patchright
-python-dotenv
-fake-useragent
-requests
-markdownify
-html_sanitizer

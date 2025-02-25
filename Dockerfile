@@ -1,20 +1,30 @@
-FROM python:3.13-slim
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 LABEL maintainer="loorisr"
 LABEL repository="https://github.com/loorisr/playwright-scrape-api"
 LABEL description="Simple scraping API based on patchright "
 LABEL date="2025-02-24"
 
-# Set the working directory in the container
+# Install the project into `/app`
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+
+ENV PYTHONUNBUFFERED=1
+
+ADD pyproject.toml pyproject.toml
+ADD uv.lock uv.lock
+
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Install patchright
 RUN patchright install chrome
@@ -44,8 +54,11 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# copy the application
-COPY app .
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+ADD app /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 ARG PORT
 ENV PORT=${PORT:-3000}

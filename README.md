@@ -7,13 +7,14 @@ It runs in docker.
 
 It is inspired from the Typescript version of [Firecrawl](https://github.com/mendableai/firecrawl/tree/main/apps/playwright-service-ts) and it is 100% compatible with it. You just have to replace `build: apps/playwright-service-ts` by `image: loorisr/patchright-scrape-api` in your docker-compose
 
-Improvements:
+Features:
 * uses https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python instead of playwright
 * better domain blocking handling
 * better media blocking handling
 * scrape multiple pages in parallel
 * scrape endpoint compatible with Firecrawl API
-* return cleaned html and markdown
+* return cleaned html and markdow
+* temporary or persistent context
 * lightweight: 1.2 Go
 
 Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
@@ -34,6 +35,8 @@ Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
 * `PROXY_PASSWORD`: password of the proxy server
 
 * `PORT`: port to run the app. Default: 3000
+
+* `PERSISTENT_CONTEXT`: To enable persistent context. If true, a volume needs to be mounted at /context. Default: False
 
 ## Endpoints
 * `/scrape`

@@ -12,9 +12,15 @@ services:
       - PROXY_SERVER=
       - PROXY_USERNAME=
       - PROXY_PASSWORD=
-     # - PORT=3000
+      - PORT=3000
+      - PERSISTENT_CONTEXT=False
+    volumes:
+      - patchright_context:/context # needed if PERSISTENT_CONTEXT=True
     restart: unless-stopped
     security_opt:
       - no-new-privileges=true
     cap_drop:
       - ALL
+
+volumes:
+  patchright_context:
