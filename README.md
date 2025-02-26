@@ -13,8 +13,9 @@ Features:
 * better media blocking handling
 * scrape multiple pages in parallel
 * scrape endpoint compatible with Firecrawl API
-* return cleaned html and markdow
+* return cleaned html and markdown
 * temporary or persistent context
+* can connect to remote browser via CDP
 * lightweight: 1.2 Go
 
 Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
@@ -37,6 +38,8 @@ Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
 * `PORT`: port to run the app. Default: 3000
 
 * `PERSISTENT_CONTEXT`: To enable persistent context. If true, a volume needs to be mounted at /context. Default: False
+
+* `REMOTE_CDP`: Address of a remote browser with CDP (Chrome DevTools Protocol). Allows you to connect to a provider or use https://github.com/JacobLinCool/playwright-docker for example.
 
 ## Endpoints
 * `/scrape`

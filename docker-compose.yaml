@@ -14,6 +14,7 @@ services:
       - PROXY_PASSWORD=
       - PORT=3000
       - PERSISTENT_CONTEXT=False
+      - REMOTE_CDP=
     volumes:
       - patchright_context:/context # needed if PERSISTENT_CONTEXT=True
     restart: unless-stopped

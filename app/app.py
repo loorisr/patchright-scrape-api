@@ -45,6 +45,8 @@ PROXY_PASSWORD = os.getenv('PROXY_PASSWORD')
 PERSISTENT_CONTEXT = os.getenv("PERSISTENT_CONTEXT", 'False').lower() in ('true', '1', 't')
 PATH_CONTEXT = "/context"
 
+REMOTE_CDP = os.getenv('REMOTE_CDP')
+
 # Global browser and context instances
 browser: Browser = None
 context: BrowserContext = None
@@ -170,46 +172,50 @@ async def lifespan(app: FastAPI):
     # Startup logic
     playwright = await async_playwright().start()
     
-    if PERSISTENT_CONTEXT:
-        print("Launching Chrome with persistent context.")
-        context = await playwright.chromium.launch_persistent_context(
-            user_data_dir=PATH_CONTEXT,
-            headless=True,
-            channel="chrome",
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process',
-                '--disable-gpu',
-                '--no-default-browser-check',
-                '--disable-infobars'
-            ],
-            **context_options
-        )
+    if REMOTE_CDP:
+        browser = await playwright.chromium.connect_over_cdp(f"wss://{REMOTE_CDP}")
+        context = browser.contexts[0]
     else:
-        print("Launching Chrome with temporary context.")
-        browser = await playwright.chromium.launch(
-            headless=True,
-            channel="chrome",
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process',
-                '--disable-gpu',
-                '--no-default-browser-check',
-                '--no-startup-window',
-                '--disable-infobars'
-            ]
-        )
-        context = await browser.new_context(**context_options)
+        if PERSISTENT_CONTEXT:
+            print("Launching Chrome with persistent context.")
+            context = await playwright.chromium.launch_persistent_context(
+                user_data_dir=PATH_CONTEXT,
+                headless=True,
+                channel="chrome",
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu',
+                    '--no-default-browser-check',
+                    '--disable-infobars'
+                ],
+                **context_options
+            )
+        else:
+            print("Launching Chrome with temporary context.")
+            browser = await playwright.chromium.launch(
+                headless=True,
+                channel="chrome",
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu',
+                    '--no-default-browser-check',
+                    '--no-startup-window',
+                    '--disable-infobars'
+                ]
+            )
+            context = await browser.new_context(**context_options)
     
 
     if RESOURCES_BLOCKED:
