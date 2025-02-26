@@ -25,7 +25,7 @@ Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
   
   *It is better to use a small list otherwise it will slow down the page loading time. This light list has already 154 000 entries!*
   
-  *The best is to block the domain at the **DNS level**.*
+  *The best is to block the domain at the **DNS level**. You can use the lightweight [blocky](https://github.com/0xERR0R/blocky) for example*
   
 * `DOMAIN_BLOCKLIST_PATH`: local path to a domain blocklist. For example blocklist.txt
 * `RESOURCES_EXCLUDED`: list of type of content to block. [] to disable. Default : ['image', 'stylesheet', 'media', 'font','other']. See https://playwright.dev/python/docs/api/class-request#request-resource-type
