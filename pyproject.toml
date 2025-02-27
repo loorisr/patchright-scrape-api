@@ -1,7 +1,7 @@
 [project]
-name = "playwright-scrape-api"
+name = "patchright-scrape-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Simple scraping API based on patchright"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

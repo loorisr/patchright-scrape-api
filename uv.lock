@@ -237,7 +237,7 @@ wheels = [
 ]
 
 [[package]]
-name = "playwright-scrape-api"
+name = "patchright-scrape-api"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

@@ -173,6 +173,7 @@ async def lifespan(app: FastAPI):
     playwright = await async_playwright().start()
     
     if REMOTE_CDP:
+        print(f"Launching Chrome with remote connection to {REMOTE_CDP}")
         browser = await playwright.chromium.connect_over_cdp(f"wss://{REMOTE_CDP}")
         context = browser.contexts[0]
     else:

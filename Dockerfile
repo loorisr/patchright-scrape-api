@@ -1,9 +1,12 @@
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
+# Define an ARG for the build type
+ARG BUILD_TYPE=default
+
 LABEL maintainer="loorisr"
 LABEL repository="https://github.com/loorisr/patchright-scrape-api"
-LABEL description="Simple scraping API based on patchright "
-LABEL date="2025-02-26"
+LABEL description="Simple scraping API based on patchright"
+LABEL date="2025-02-27"
 
 # Install the project into `/app`
 WORKDIR /app
@@ -26,33 +29,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Install patchright
-RUN patchright install chrome
-
-# Install Playwright dependencies. Uses less space than playwright install --with-deps chromium
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libdbus-1-3 \
-    libxcb1 \
-    libxkbcommon0 \
-    libx11-6 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libatspi2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+# Install patchright with Chrome
+RUN if [ "$BUILD_TYPE" != "lite" ]; then \
+        patchright install chrome; \
+    fi
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching

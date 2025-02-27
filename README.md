@@ -16,7 +16,7 @@ Features:
 * return cleaned html and markdown
 * temporary or persistent context
 * can connect to remote browser via CDP
-* lightweight: 1.2 Go
+* lightweight: 1.21 Go / 334 mo without Chrome (for remote CDP connection)
 
 Available on Docker hub: `docker pull loorisr/patchright-scrape-api:latest`
 
